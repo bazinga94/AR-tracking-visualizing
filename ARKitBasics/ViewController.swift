@@ -9,20 +9,17 @@ import UIKit
 import SceneKit
 import ARKit
 
-extension CGPoint {
-	func distance2DFrom(_ otherPoint: CGPoint) -> Double {
-		return sqrt(pow((otherPoint.x - self.x), 2) + pow((otherPoint.y - self.y), 2))
-	}
-}
-
 class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
     // MARK: - IBOutlets
 
     @IBOutlet weak var sessionInfoView: UIView!
     @IBOutlet weak var sessionInfoLabel: UILabel!
     @IBOutlet weak var sceneView: ARSCNView!
-
-	private let centerAllowedTapRadius: Double = 120
+	@IBOutlet weak var resetButton: UIButton!
+	
+	private var startNode: SCNNode?
+	private var endNode: SCNNode?
+	private var lineNode: SCNNode?
 	
     // MARK: - View Life Cycle
 	
@@ -66,6 +63,13 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
         sceneView.session.pause()
     }
 	
+	private func reset() {
+		startNode?.removeFromParentNode()
+		startNode = nil
+		endNode?.removeFromParentNode()
+		endNode = nil
+	}
+	
 	// MARK: - UITapGestureRecognizer
 	
 	@objc
@@ -73,27 +77,6 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
 		if (tapGestureRecognizer.state == .recognized) {
 			let tapPoint = tapGestureRecognizer.location(in: sceneView)
 			tryPlacingMarker1(location: tapPoint)
-//			if (tapPoint.distance2DFrom(sceneView.center) <= centerAllowedTapRadius) {
-//				tryPlacingMarker1(location: tapPoint)
-//			}
-		}
-	}
-	
-	@objc func handlePanGesture(_ gesture: UIPanGestureRecognizer) {
-		if gesture.state == .changed {
-			let location = gesture.location(in: sceneView)
-			if let result = raycastResult(location: location) {
-				// Check if there's an existing ARAnchor with the same name
-				if let existingAnchor = sceneView.session.currentFrame?.anchors.first(where: { $0.name == "virtualObject" }) {
-					// Update the existing ARAnchor's transform based on the raycast result
-					let newTransform = result.worldTransform // Use the worldTransform from ARRacastResult
-					
-					// Remove the existing anchor and add the updated anchor back to the session
-//					sceneView.session.remove(anchor: existingAnchor)
-//					sceneView.session.add(anchor: ARAnchor(name: "virtualObject", transform: newTransform))
-					
-				}
-			}
 		}
 	}
 	
@@ -123,6 +106,20 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
 			return result
 		} else {
 			return nil
+		}
+	}
+	
+	@objc func handlePanGesture(_ gesture: UIPanGestureRecognizer) {
+		if gesture.state == .changed {
+			let location = gesture.location(in: sceneView)
+			if let result = raycastResult(location: location) {
+				// Check if there's an existing ARAnchor with the same name
+				if let existingAnchor = sceneView.session.currentFrame?.anchors.first(where: { $0.name == "virtualObject" }) {
+					// Update the existing ARAnchor's transform based on the raycast result
+					let newTransform = result.worldTransform // Use the worldTransform from ARRacastResult
+					
+				}
+			}
 		}
 	}
 
@@ -271,4 +268,9 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
         configuration.planeDetection = [.horizontal, .vertical]
         sceneView.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
     }
+	
+	
+	@IBAction func resetButtonTapped(_ sender: Any) {
+		reset()
+	}
 }
