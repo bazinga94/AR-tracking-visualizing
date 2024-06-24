@@ -11,6 +11,10 @@ import ARKit
 extension ARPlaneAnchor.Classification {
     var description: String {
         switch self {
+		case .door:
+			return "Door"
+		case .window:
+			return "Window"
         case .wall:
             return "Wall"
         case .floor:
