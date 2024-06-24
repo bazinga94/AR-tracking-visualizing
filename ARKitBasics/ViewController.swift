@@ -33,6 +33,9 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
 			action: #selector(onARSceneViewTapped)
 		)
 		sceneView?.addGestureRecognizer(tapGestureRecognizer)
+		
+		let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(handlePanGesture(_:)))
+		sceneView.addGestureRecognizer(panGestureRecognizer)
 	}
 
     /// - Tag: StartARSession
@@ -67,107 +70,68 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
 	
 	@objc
 	func onARSceneViewTapped(tapGestureRecognizer: UITapGestureRecognizer) {
-		guard let sceneView = sceneView else { return }
 		if (tapGestureRecognizer.state == .recognized) {
 			let tapPoint = tapGestureRecognizer.location(in: sceneView)
-			if (tapPoint.distance2DFrom(sceneView.center) <= centerAllowedTapRadius) {
-				tryPlacingMarker2(location: tapPoint)
+			tryPlacingMarker1(location: tapPoint)
+//			if (tapPoint.distance2DFrom(sceneView.center) <= centerAllowedTapRadius) {
+//				tryPlacingMarker1(location: tapPoint)
+//			}
+		}
+	}
+	
+	@objc func handlePanGesture(_ gesture: UIPanGestureRecognizer) {
+		if gesture.state == .changed {
+			let location = gesture.location(in: sceneView)
+			if let result = raycastResult(location: location) {
+				// Check if there's an existing ARAnchor with the same name
+				if let existingAnchor = sceneView.session.currentFrame?.anchors.first(where: { $0.name == "virtualObject" }) {
+					// Update the existing ARAnchor's transform based on the raycast result
+					let newTransform = result.worldTransform // Use the worldTransform from ARRacastResult
+					
+					// Remove the existing anchor and add the updated anchor back to the session
+//					sceneView.session.remove(anchor: existingAnchor)
+//					sceneView.session.add(anchor: ARAnchor(name: "virtualObject", transform: newTransform))
+					
+				}
 			}
 		}
 	}
 	
 	// Mark at tap location
 	private func tryPlacingMarker1(location: CGPoint) {
-		if let query = sceneView.raycastQuery(from: location, allowing: .existingPlaneInfinite, alignment: .any),
-		   let result = sceneView.session.raycast(query).first {
+		if let result = raycastResult(location: location) {
 			// Place a virtual object at the raycast result position
-			let anchor = ARAnchor(name: "virtualObject", transform: result.worldTransform)
-			sceneView.session.add(anchor: anchor)
-		}
-	}
-	
-	// Mark at center horizontal location
-	private func tryPlacingMarker2(location: CGPoint) {
-		if let result = smartRaycastResultForViewCenter() {
-			// Place a virtual object at the raycast result position
-			let anchor = ARAnchor(name: "virtualObject", transform: result.worldTransform)
-			sceneView.session.add(anchor: anchor)
-		}
-	}
-	
-	private func smartRaycastResultForViewCenter() -> ARRaycastResult? {
-		let currentTaskAnchorAlignment: ARPlaneAnchor.Alignment = .horizontal
-		let existingPlaneGeometryResults = raycastResultsForViewCenter(allowing: .existingPlaneGeometry)
-		
-		if let firstExistingPlaneGeometryResult = existingPlaneGeometryResults.first,
-		   let planeAnchor = (firstExistingPlaneGeometryResult.anchor as? ARPlaneAnchor),
-		   planeAnchor.alignment == currentTaskAnchorAlignment {
-			return firstExistingPlaneGeometryResult
-		}
-		return nil
-	}
-	
-	private func raycastResultsForViewCenter(allowing targetType: ARRaycastQuery.Target) -> [ARRaycastResult] {
-		guard let sceneView = sceneView,
-			  let query = sceneView.raycastQuery(
-				from: sceneView.center,
-				allowing: targetType,
-				alignment: .horizontal
-			  )
-		else { return [] }
-		return sceneView.session.raycast(query)
-	}
-	
-	private func findIntersectionBetween(planeAnchor: ARPlaneAnchor, otherPlaneAnchor: ARPlaneAnchor) -> SCNVector3? {
-		// Get the vertices of the first plane
-		let planeVertices = getPlaneVertices(anchor: planeAnchor)
-		// Get the vertices of the second plane
-		let otherPlaneVertices = getPlaneVertices(anchor: otherPlaneAnchor)
-		
-		// Check each vertex of the first plane against each vertex of the second plane
-		for vertex in planeVertices {
-			for otherVertex in otherPlaneVertices {
-				let distance = simd_distance(vertex, otherVertex)
-				if distance < 0.1 { // 임계값을 원하는 값으로 조정
-					// 두 꼭짓점이 가까운 경우 해당 위치를 반환
-					return SCNVector3((vertex.x + otherVertex.x) / 2, (vertex.y + otherVertex.y) / 2, (vertex.z + otherVertex.z) / 2)
-				}
+			if let existingAnchor = sceneView.session.currentFrame?.anchors.first(where: { $0.name == "virtualObject" }) {
+				// Update the existing ARAnchor's transform based on the raycast result
+				var newTransform = existingAnchor.transform
+				newTransform = result.worldTransform // Use the worldTransform from ARRacastResult
+				
+				// Remove the existing anchor and add the updated anchor back to the session
+				sceneView.session.remove(anchor: existingAnchor)
+				sceneView.session.add(anchor: ARAnchor(name: "virtualObject", transform: newTransform))
+			} else {
+				// If there's no existing anchor, create a new one at the tapped location
+				let newAnchor = ARAnchor(name: "virtualObject", transform: result.worldTransform)
+				sceneView.session.add(anchor: newAnchor)
 			}
 		}
-		return nil
 	}
 	
-	func getPlaneVertices(anchor: ARPlaneAnchor) -> [simd_float3] {
-		let center = anchor.center
-		let extent = anchor.extent
-		print(anchor.alignment, center, extent)
-
-		let topLeft = simd_float3(center.x - extent.x / 2, 0, center.z - extent.z / 2)
-		let topRight = simd_float3(center.x + extent.x / 2, 0, center.z - extent.z / 2)
-		let bottomLeft = simd_float3(center.x - extent.x / 2, 0, center.z + extent.z / 2)
-		let bottomRight = simd_float3(center.x + extent.x / 2, 0, center.z + extent.z / 2)
-
-		return [topLeft, topRight, bottomLeft, bottomRight]
+	private func raycastResult(location: CGPoint) -> ARRaycastResult? {
+		if let query = sceneView.raycastQuery(from: location, allowing: .existingPlaneGeometry, alignment: .any),
+		   let result = sceneView.session.raycast(query).first {
+			return result
+		} else {
+			return nil
+		}
 	}
 
     // MARK: - ARSCNViewDelegate
 	
-//	func renderer(_ renderer: SCNSceneRenderer, nodeFor anchor: ARAnchor) -> SCNNode? {
-//		if #available(iOS 13.0, *) {
-//			if anchor.name == "virtualObject" {
-//				let node = SCNNode()
-//				node.geometry = SCNSphere(radius: 0.1)
-//				node.geometry?.firstMaterial?.diffuse.contents = UIColor.red
-//				return node
-//			}
-//		}
-//		return nil
-//	}
-	
 	/// - Tag: PlaceARContent
 	func renderer(_ renderer: SCNSceneRenderer, didAdd node: SCNNode, for anchor: ARAnchor) {
 		if anchor.name == "virtualObject" {
-			let sphereNode = SCNNode(geometry: SCNSphere(radius: 0.1))
+			let sphereNode = SCNNode(geometry: SCNSphere(radius: 0.05))
 			sphereNode.geometry?.firstMaterial?.diffuse.contents = UIColor.red
 			node.addChildNode(sphereNode)
 		} else {
@@ -209,19 +173,6 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
 			if let oldClassification = classificationGeometry.string as? String, oldClassification != currentClassification {
 				classificationGeometry.string = currentClassification
 				classificationNode.centerAlign()
-			}
-		}
-		
-		if let otherPlaneAnchors = sceneView.session.currentFrame?.anchors.compactMap({ $0 as? ARPlaneAnchor }), otherPlaneAnchors.count > 1 {
-			for otherAnchor in otherPlaneAnchors where otherAnchor != planeAnchor {
-				if let intersection = findIntersectionBetween(planeAnchor: planeAnchor, otherPlaneAnchor: otherAnchor) {
-					let sphere = SCNSphere(radius: 0.05)
-					sphere.firstMaterial?.diffuse.contents = UIColor.green
-					let sphereNode = SCNNode(geometry: SCNSphere(radius: 0.05))
-					sphereNode.geometry?.firstMaterial?.diffuse.contents = UIColor.green
-					sphereNode.position = intersection
-					sceneView.scene.rootNode.addChildNode(sphereNode)
-				}
 			}
 		}
     }
