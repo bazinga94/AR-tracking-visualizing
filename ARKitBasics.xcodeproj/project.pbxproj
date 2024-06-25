@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		112FE5671F4F95A200BF85EA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 112FE5661F4F95A200BF85EA /* Assets.xcassets */; };
+		4376EA7E2C2A4D0100EBDAB6 /* CustomPlane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4376EA7D2C2A4D0100EBDAB6 /* CustomPlane.swift */; };
 		5C028ED021029E1000C7AB1E /* Utilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C028ECF21029E1000C7AB1E /* Utilities.swift */; };
 		5C16677F20E6E21D00B25B7E /* Plane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C16677E20E6E21D00B25B7E /* Plane.swift */; };
 		842316E01F2030C300D189D1 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 842316DF1F2030C300D189D1 /* AppDelegate.swift */; };
@@ -20,6 +21,7 @@
 /* Begin PBXFileReference section */
 		112FE5661F4F95A200BF85EA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		254A1C90254A0E7000000001 /* SampleCode.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = SampleCode.xcconfig; path = Configuration/SampleCode.xcconfig; sourceTree = "<group>"; };
+		4376EA7D2C2A4D0100EBDAB6 /* CustomPlane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomPlane.swift; sourceTree = "<group>"; };
 		5C028ECF21029E1000C7AB1E /* Utilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utilities.swift; sourceTree = "<group>"; };
 		5C16677E20E6E21D00B25B7E /* Plane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Plane.swift; sourceTree = "<group>"; };
 		842316DC1F2030C300D189D1 /* ARKitBasics.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ARKitBasics.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -83,6 +85,7 @@
 				842316ED1F2030C300D189D1 /* Info.plist */,
 				84ABEA091F3D15E70052D547 /* Assets.scnassets */,
 				112FE5661F4F95A200BF85EA /* Assets.xcassets */,
+				4376EA7D2C2A4D0100EBDAB6 /* CustomPlane.swift */,
 			);
 			path = ARKitBasics;
 			sourceTree = "<group>";
@@ -171,6 +174,7 @@
 				842316E41F2030C300D189D1 /* ViewController.swift in Sources */,
 				5C16677F20E6E21D00B25B7E /* Plane.swift in Sources */,
 				842316E01F2030C300D189D1 /* AppDelegate.swift in Sources */,
+				4376EA7E2C2A4D0100EBDAB6 /* CustomPlane.swift in Sources */,
 				5C028ED021029E1000C7AB1E /* Utilities.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

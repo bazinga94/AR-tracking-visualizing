@@ -9,6 +9,16 @@ import UIKit
 import SceneKit
 import ARKit
 
+extension SCNVector3 {
+	func length() -> Float {
+		return sqrtf(x * x + y * y + z * z)
+	}
+}
+
+func - (left: SCNVector3, right: SCNVector3) -> SCNVector3 {
+	return SCNVector3Make(left.x - right.x, left.y - right.y, left.z - right.z)
+}
+
 class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
     // MARK: - IBOutlets
 
@@ -16,6 +26,7 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
     @IBOutlet weak var sessionInfoLabel: UILabel!
     @IBOutlet weak var sceneView: ARSCNView!
 	@IBOutlet weak var resetButton: UIButton!
+	@IBOutlet weak var distanceLabel: UILabel!
 	
 	private var startNode: SCNNode?
 	private var endNode: SCNNode?
@@ -75,8 +86,38 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
 	@objc
 	func onARSceneViewTapped(tapGestureRecognizer: UITapGestureRecognizer) {
 		if (tapGestureRecognizer.state == .recognized) {
-			let tapPoint = tapGestureRecognizer.location(in: sceneView)
-			tryPlacingMarker1(location: tapPoint)
+			let location = tapGestureRecognizer.location(in: sceneView)
+			if startNode == nil {
+				// First tap: Add startNode
+				if let result = raycastResult(location: location) {
+					startNode = createSphereNode(radius: 0.02, color: .green)
+					startNode?.simdTransform = result.worldTransform
+					sceneView.scene.rootNode.addChildNode(startNode!)
+				}
+			} else if endNode == nil {
+				// Second tap: Add endNode
+				if let result = raycastResult(location: location) {
+					endNode = createSphereNode(radius: 0.02, color: .blue)
+					endNode?.simdTransform = result.worldTransform
+					sceneView.scene.rootNode.addChildNode(endNode!)
+					
+					let distance = (endNode!.position - startNode!.position).length()
+					print(distance)
+					distanceLabel.text = String(distance)
+					lineNode?.removeFromParentNode()
+					lineNode = drawLine(from: startNode!, to: endNode!, length: distance)
+				}
+			} else {
+				// Third and subsequent taps: Update endNode's position
+				if let result = raycastResult(location: location) {
+					endNode?.simdTransform = result.worldTransform
+					let distance = (endNode!.position - startNode!.position).length()
+					print(distance)
+					distanceLabel.text = String(distance)
+					lineNode?.removeFromParentNode()
+					lineNode = drawLine(from: startNode!, to: endNode!, length: distance)
+				}
+			}
 		}
 	}
 	
@@ -109,6 +150,30 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
 		}
 	}
 	
+	private func createSphereNode(radius: CGFloat, color: UIColor) -> SCNNode {
+		let sphere = SCNSphere(radius: radius)
+		let sphereNode = SCNNode(geometry: sphere)
+		sphereNode.geometry?.firstMaterial?.diffuse.contents = color
+		return sphereNode
+	}
+	
+	private func drawLine(from: SCNNode, to: SCNNode, length: Float) -> SCNNode {
+		
+		let geometry = SCNCapsule(capRadius: 0.004, height: CGFloat(length))
+		geometry.materials.first?.diffuse.contents = UIColor.red
+		let line = SCNNode(geometry: geometry)
+		
+		let lineNode = SCNNode()
+		lineNode.eulerAngles = SCNVector3Make(Float.pi/2, 0, 0)
+		lineNode.addChildNode(line)
+		
+		from.addChildNode(lineNode)
+		lineNode.position = SCNVector3Make(0, 0, -length / 2)
+		from.look(at: to.position)
+		
+		return lineNode
+	}
+	
 	@objc func handlePanGesture(_ gesture: UIPanGestureRecognizer) {
 		if gesture.state == .changed {
 			let location = gesture.location(in: sceneView)
@@ -132,45 +197,64 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
 			sphereNode.geometry?.firstMaterial?.diffuse.contents = UIColor.red
 			node.addChildNode(sphereNode)
 		} else {
-			// Place content only for anchors found by plane detection.
+//			// Place content only for anchors found by plane detection.
+//			guard let planeAnchor = anchor as? ARPlaneAnchor else { return }
+//			
+//			// Create a custom object to visualize the plane geometry and extent.
+//			let plane = Plane(anchor: planeAnchor, in: sceneView)
+//			
+//			// Add the visualization to the ARKit-managed node so that it tracks
+//			// changes in the plane anchor as plane estimation continues.
+//			node.addChildNode(plane)
+			
 			guard let planeAnchor = anchor as? ARPlaneAnchor else { return }
-			
-			// Create a custom object to visualize the plane geometry and extent.
-			let plane = Plane(anchor: planeAnchor, in: sceneView)
-			
-			// Add the visualization to the ARKit-managed node so that it tracks
-			// changes in the plane anchor as plane estimation continues.
-			node.addChildNode(plane)
+			let planeNode = CustomPlane(anchor: planeAnchor)
+			node.addChildNode(planeNode)
 		}
 	}
 
     /// - Tag: UpdateARContent
     func renderer(_ renderer: SCNSceneRenderer, didUpdate node: SCNNode, for anchor: ARAnchor) {
-        // Update only anchors and nodes set up by `renderer(_:didAdd:for:)`.
-        guard let planeAnchor = anchor as? ARPlaneAnchor,
-            let plane = node.childNodes.first as? Plane
-            else { return }
-        
-        // Update ARSCNPlaneGeometry to the anchor's new estimated shape.
-        if let planeGeometry = plane.meshNode.geometry as? ARSCNPlaneGeometry {
-            planeGeometry.update(from: planeAnchor.geometry)
-        }
-
-        // Update extent visualization to the anchor's new bounding rectangle.
-        if let extentGeometry = plane.extentNode.geometry as? SCNPlane {
-            extentGeometry.width = CGFloat(planeAnchor.extent.x)
-            extentGeometry.height = CGFloat(planeAnchor.extent.z)
-            plane.extentNode.simdPosition = planeAnchor.center
-        }
+//        // Update only anchors and nodes set up by `renderer(_:didAdd:for:)`.
+//        guard let planeAnchor = anchor as? ARPlaneAnchor,
+//            let plane = node.childNodes.first as? Plane
+//            else { return }
+//        
+//        // Update ARSCNPlaneGeometry to the anchor's new estimated shape.
+//        if let planeGeometry = plane.meshNode.geometry as? ARSCNPlaneGeometry {
+//            planeGeometry.update(from: planeAnchor.geometry)
+//        }
+//
+//        // Update extent visualization to the anchor's new bounding rectangle.
+//        if let extentGeometry = plane.extentNode.geometry as? SCNPlane {
+//            extentGeometry.width = CGFloat(planeAnchor.extent.x)
+//            extentGeometry.height = CGFloat(planeAnchor.extent.z)
+//            plane.extentNode.simdPosition = planeAnchor.center
+//        }
+//		
+//		// Update the plane's classification and the text position
+//		if let classificationNode = plane.classificationNode,
+//		   let classificationGeometry = classificationNode.geometry as? SCNText {
+//			let currentClassification = planeAnchor.classification.description
+//			if let oldClassification = classificationGeometry.string as? String, oldClassification != currentClassification {
+//				classificationGeometry.string = currentClassification
+//				classificationNode.centerAlign()
+//			}
+//		}
 		
-		// Update the plane's classification and the text position
-		if let classificationNode = plane.classificationNode,
-		   let classificationGeometry = classificationNode.geometry as? SCNText {
-			let currentClassification = planeAnchor.classification.description
-			if let oldClassification = classificationGeometry.string as? String, oldClassification != currentClassification {
-				classificationGeometry.string = currentClassification
-				classificationNode.centerAlign()
-			}
+		// Update only anchors and nodes set up by `renderer(_:didAdd:for:)`.
+		guard let planeAnchor = anchor as? ARPlaneAnchor,
+			let plane = node.childNodes.first as? CustomPlane
+			else { return }
+		
+		if let planeGeometry = plane.geometry as? ARSCNPlaneGeometry {
+			planeGeometry.update(from: planeAnchor.geometry)
+		}
+		
+		if let planeGeometry = plane.geometry as? SCNPlane {
+			planeGeometry.width = CGFloat(planeAnchor.extent.x)
+			planeGeometry.height = CGFloat(planeAnchor.extent.z)
+			plane.simdPosition = planeAnchor.center
 		}
     }
 
