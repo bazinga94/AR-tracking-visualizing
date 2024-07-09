@@ -39,6 +39,14 @@ extension SCNNode {
         let extents = float3(max) - float3(min)
         simdPivot = float4x4(translation: ((extents / 2) + float3(min)))
     }
+	
+	func centerTop(offset: Float) {
+		let (min, max) = boundingBox
+		let extents = float3(max) - float3(min)
+		var translationOffset = float3(min)
+		translationOffset.y += max.y + offset
+		simdPivot = float4x4(translation: translationOffset)
+	}
 }
 
 extension float4x4 {

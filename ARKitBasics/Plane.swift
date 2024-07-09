@@ -17,6 +17,7 @@ class Plane: SCNNode {
     let meshNode: SCNNode
     let extentNode: SCNNode
     var classificationNode: SCNNode?
+	var selectButtonNode: SCNNode?
     
     /// - Tag: VisualizePlane
     init(anchor: ARPlaneAnchor, in sceneView: ARSCNView) {
@@ -51,16 +52,28 @@ class Plane: SCNNode {
         
         // Display the plane's classification, if supported on the device
         if #available(iOS 12.0, *), ARPlaneAnchor.isClassificationSupported {
-            let classification = anchor.classification.description
-            let textNode = self.makeTextNode(classification  + " Height: \(anchor.extent.z)")
-            classificationNode = textNode
-            // Change the pivot of the text node to its center
-            textNode.centerAlign()
-            // Add the classification node as a child node so that it displays the classification
-            extentNode.addChildNode(textNode)
+			switch anchor.classification {
+			case .wall:
+				let classification = anchor.classification.description
+				let textNode = self.makeTextNode(classification  + " Height: \(anchor.extent.z)")
+				classificationNode = textNode
+				// Change the pivot of the text node to its center
+				textNode.centerAlign()
+				// Add the classification node as a child node so that it displays the classification
+				extentNode.addChildNode(textNode)
+				
+				let buttonNode = makeButtonNode()
+				self.selectButtonNode = buttonNode
+				buttonNode.centerTop(offset: 50)
+				extentNode.addChildNode(buttonNode)
+			default:
+				break
+			}
         }
         #endif
-    }
+		
+		
+	}
     
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
@@ -106,4 +119,15 @@ class Plane: SCNNode {
         
         return textNode
     }
+	
+	private func makeButtonNode() -> SCNNode {
+		let buttonGeometry = SCNText(string: "Select", extrusionDepth: 1)
+		buttonGeometry.font = UIFont(name: "Futura", size: 100)
+		buttonGeometry.firstMaterial?.diffuse.contents = UIColor.green
+
+		let buttonNode = SCNNode(geometry: buttonGeometry)
+		buttonNode.simdScale = float3(0.0005)
+		
+		return buttonNode
+	}
 }

@@ -279,6 +279,10 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
 			}
 		}
 		
+		if let selectButtonNode = plane.selectButtonNode {
+			selectButtonNode.centerTop(offset: 50)
+		}
+		
 		// Update only anchors and nodes set up by `renderer(_:didAdd:for:)`.
 //		guard let planeAnchor = anchor as? ARPlaneAnchor,
 //			planeAnchor.alignment == .vertical,
