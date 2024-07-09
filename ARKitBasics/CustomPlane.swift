@@ -21,16 +21,16 @@ class CustomPlane: SCNNode {
 		// Set color and texture based on plane alignment
 		switch anchor.alignment {
 		case .horizontal:
-			planeGeometry.firstMaterial?.diffuse.contents = UIColor.blue.withAlphaComponent(0.1)
-			planeGeometry.firstMaterial?.diffuse.contents = createGridTexture(color: .blue)
+//			planeGeometry.firstMaterial?.diffuse.contents = UIColor.blue.withAlphaComponent(0.1)
+//			planeGeometry.firstMaterial?.diffuse.contents = createGridTexture(color: .blue)
 			break
 		case .vertical:
 			planeGeometry.firstMaterial?.diffuse.contents = UIColor.red.withAlphaComponent(0.1)
-			planeGeometry.firstMaterial?.diffuse.contents = createGridTexture(color: .red)
+			planeGeometry.firstMaterial?.diffuse.contents = createGridTexture(color: .cyan)
 		@unknown default:
 			planeGeometry.firstMaterial?.diffuse.contents = UIColor.green.withAlphaComponent(0.1)
 		}
-		
+		self.opacity = 0.5
 		self.geometry = planeGeometry
 		self.eulerAngles.x = -.pi / 2
 		self.position = SCNVector3(anchor.center.x, 0, anchor.center.z)

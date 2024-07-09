@@ -36,14 +36,17 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
 	
 	override func viewDidLoad() {
 		super.viewDidLoad()
-		let tapGestureRecognizer = UITapGestureRecognizer(
-			target: self,
-			action: #selector(onARSceneViewTapped)
-		)
-		sceneView?.addGestureRecognizer(tapGestureRecognizer)
+//		let tapGestureRecognizer = UITapGestureRecognizer(
+//			target: self,
+//			action: #selector(onARSceneViewTapped)
+//		)
+//		sceneView?.addGestureRecognizer(tapGestureRecognizer)
 		
 		let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(handlePanGesture(_:)))
 		sceneView.addGestureRecognizer(panGestureRecognizer)
+		
+		let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(onPlaneTapped(_:)))
+		sceneView.addGestureRecognizer(tapGestureRecognizer)
 	}
 
     /// - Tag: StartARSession
@@ -82,6 +85,37 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
 	}
 	
 	// MARK: - UITapGestureRecognizer
+	
+	@objc func onPlaneTapped(_ gestureRecognize: UITapGestureRecognizer) {
+		let location = gestureRecognize.location(in: sceneView)
+		let hitResults = sceneView.hitTest(location, options: [:])
+		
+		if let hitResult = hitResults.first {
+			let node = hitResult.node
+			let height = node.boundingBox.max.y - node.boundingBox.min.y
+			print("Selected node height 1: \(height)")
+		}
+		
+		if let result = raycastResult(location: location),
+		   let anchor = result.anchor,
+			let hitTestResultNode = sceneView.node(for: anchor) {
+			
+			let height = hitTestResultNode.boundingBox.max.y - hitTestResultNode.boundingBox.min.y
+			print("Selected node height 2: \(height)")
+		}
+		
+		if let result = raycastResult(location: location),
+		   let anchor = result.anchor,
+		   let planeAnchor = anchor as? ARPlaneAnchor {
+			let height: Float
+			if #available(iOS 16.0, *) {
+				height = planeAnchor.planeExtent.height
+			} else {
+				height = planeAnchor.extent.z
+			}
+			print("Selected node height 3: \(height)")
+		}
+	}
 	
 	@objc
 	func onARSceneViewTapped(tapGestureRecognizer: UITapGestureRecognizer) {
@@ -197,65 +231,69 @@ class ViewController: UIViewController, ARSCNViewDelegate, ARSessionDelegate {
 			sphereNode.geometry?.firstMaterial?.diffuse.contents = UIColor.red
 			node.addChildNode(sphereNode)
 		} else {
-//			// Place content only for anchors found by plane detection.
-//			guard let planeAnchor = anchor as? ARPlaneAnchor else { return }
-//			
-//			// Create a custom object to visualize the plane geometry and extent.
-//			let plane = Plane(anchor: planeAnchor, in: sceneView)
-//			
-//			// Add the visualization to the ARKit-managed node so that it tracks
-//			// changes in the plane anchor as plane estimation continues.
-//			node.addChildNode(plane)
+			// Place content only for anchors found by plane detection.
+			guard let planeAnchor = anchor as? ARPlaneAnchor,
+				  planeAnchor.alignment == .vertical else { return }
 			
-			guard let planeAnchor = anchor as? ARPlaneAnchor else { return }
-			let planeNode = CustomPlane(anchor: planeAnchor)
-			node.addChildNode(planeNode)
+			// Create a custom object to visualize the plane geometry and extent.
+			let plane = Plane(anchor: planeAnchor, in: sceneView)
+			
+			// Add the visualization to the ARKit-managed node so that it tracks
+			// changes in the plane anchor as plane estimation continues.
+			node.addChildNode(plane)
+			
+//			guard let planeAnchor = anchor as? ARPlaneAnchor else { return }
+//			if planeAnchor.alignment == .vertical {
+//				let planeNode = CustomPlane(anchor: planeAnchor)
+//				node.addChildNode(planeNode)
+//			}
 		}
 	}
 
     /// - Tag: UpdateARContent
-    func renderer(_ renderer: SCNSceneRenderer, didUpdate node: SCNNode, for anchor: ARAnchor) {
-//        // Update only anchors and nodes set up by `renderer(_:didAdd:for:)`.
-//        guard let planeAnchor = anchor as? ARPlaneAnchor,
-//            let plane = node.childNodes.first as? Plane
-//            else { return }
-//        
-//        // Update ARSCNPlaneGeometry to the anchor's new estimated shape.
-//        if let planeGeometry = plane.meshNode.geometry as? ARSCNPlaneGeometry {
-//            planeGeometry.update(from: planeAnchor.geometry)
-//        }
-//
-//        // Update extent visualization to the anchor's new bounding rectangle.
-//        if let extentGeometry = plane.extentNode.geometry as? SCNPlane {
-//            extentGeometry.width = CGFloat(planeAnchor.extent.x)
-//            extentGeometry.height = CGFloat(planeAnchor.extent.z)
-//            plane.extentNode.simdPosition = planeAnchor.center
-//        }
-//		
-//		// Update the plane's classification and the text position
-//		if let classificationNode = plane.classificationNode,
-//		   let classificationGeometry = classificationNode.geometry as? SCNText {
-//			let currentClassification = planeAnchor.classification.description
-//			if let oldClassification = classificationGeometry.string as? String, oldClassification != currentClassification {
-//				classificationGeometry.string = currentClassification
-//				classificationNode.centerAlign()
-//			}
-//		}
-		
+	func renderer(_ renderer: SCNSceneRenderer, didUpdate node: SCNNode, for anchor: ARAnchor) {
 		// Update only anchors and nodes set up by `renderer(_:didAdd:for:)`.
 		guard let planeAnchor = anchor as? ARPlaneAnchor,
-			let plane = node.childNodes.first as? CustomPlane
-			else { return }
+			  planeAnchor.alignment == .vertical,
+			  let plane = node.childNodes.first as? Plane else { return }
 		
-		if let planeGeometry = plane.geometry as? ARSCNPlaneGeometry {
-			planeGeometry.update(from: planeAnchor.geometry)
+        // Update ARSCNPlaneGeometry to the anchor's new estimated shape.
+        if let planeGeometry = plane.meshNode.geometry as? ARSCNPlaneGeometry {
+            planeGeometry.update(from: planeAnchor.geometry)
+        }
+
+        // Update extent visualization to the anchor's new bounding rectangle.
+        if let extentGeometry = plane.extentNode.geometry as? SCNPlane {
+            extentGeometry.width = CGFloat(planeAnchor.extent.x)
+            extentGeometry.height = CGFloat(planeAnchor.extent.z)
+            plane.extentNode.simdPosition = planeAnchor.center
+        }
+		
+		// Update the plane's classification and the text position
+		if let classificationNode = plane.classificationNode,
+		   let classificationGeometry = classificationNode.geometry as? SCNText {
+			let currentClassification = planeAnchor.classification.description
+			if let oldClassification = classificationGeometry.string as? String, oldClassification != currentClassification {
+				classificationGeometry.string = currentClassification + " Height: \(planeAnchor.extent.z)"
+				classificationNode.centerAlign()
+			}
 		}
 		
-		if let planeGeometry = plane.geometry as? SCNPlane {
-			planeGeometry.width = CGFloat(planeAnchor.extent.x)
-			planeGeometry.height = CGFloat(planeAnchor.extent.z)
-			plane.simdPosition = planeAnchor.center
-		}
+		// Update only anchors and nodes set up by `renderer(_:didAdd:for:)`.
+//		guard let planeAnchor = anchor as? ARPlaneAnchor,
+//			planeAnchor.alignment == .vertical,
+//			let plane = node.childNodes.first as? CustomPlane
+//			else { return }
+//		
+//		if let planeGeometry = plane.geometry as? ARSCNPlaneGeometry {
+//			planeGeometry.update(from: planeAnchor.geometry)
+//		}
+//		
+//		if let planeGeometry = plane.geometry as? SCNPlane {
+//			planeGeometry.width = CGFloat(planeAnchor.extent.x)
+//			planeGeometry.height = CGFloat(planeAnchor.extent.z)
+//			plane.simdPosition = planeAnchor.center
+//		}
     }
 
     // MARK: - ARSessionDelegate

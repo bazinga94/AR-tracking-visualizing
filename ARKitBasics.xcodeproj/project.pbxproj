@@ -78,6 +78,7 @@
 			children = (
 				842316E31F2030C300D189D1 /* ViewController.swift */,
 				5C16677E20E6E21D00B25B7E /* Plane.swift */,
+				4376EA7D2C2A4D0100EBDAB6 /* CustomPlane.swift */,
 				5C028ECF21029E1000C7AB1E /* Utilities.swift */,
 				842316DF1F2030C300D189D1 /* AppDelegate.swift */,
 				842316E51F2030C300D189D1 /* Main.storyboard */,
@@ -85,7 +86,6 @@
 				842316ED1F2030C300D189D1 /* Info.plist */,
 				84ABEA091F3D15E70052D547 /* Assets.scnassets */,
 				112FE5661F4F95A200BF85EA /* Assets.xcassets */,
-				4376EA7D2C2A4D0100EBDAB6 /* CustomPlane.swift */,
 			);
 			path = ARKitBasics;
 			sourceTree = "<group>";

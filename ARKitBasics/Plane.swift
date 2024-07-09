@@ -52,7 +52,7 @@ class Plane: SCNNode {
         // Display the plane's classification, if supported on the device
         if #available(iOS 12.0, *), ARPlaneAnchor.isClassificationSupported {
             let classification = anchor.classification.description
-            let textNode = self.makeTextNode(classification)
+            let textNode = self.makeTextNode(classification  + " Height: \(anchor.extent.z)")
             classificationNode = textNode
             // Change the pivot of the text node to its center
             textNode.centerAlign()
